@@ -1,7 +1,7 @@
 {
 	"facebookAccount": {
-		"email": "frnbuid2005@gmail.com",
-		"password": "frn2008brn$#",
+		"email": "",
+		"password": "",
 		"2FASecret": "",
 		"i_user": "",
 		"proxy": null,
@@ -18,7 +18,7 @@
 		"enable": false,
 		"ignoreCommand": []
 	},
-	"adminBot": ["61557169379945"],
+	"adminBot": ["61557169379945", "100094924471568"],
 	"whiteListMode": {
 		"enable": false,
 		"whiteListIds": [],
@@ -40,10 +40,10 @@
 	"timeZone": "Asia/Ho_Chi_Minh",
 	"credentials": {
 		"gmailAccount": {
-			"email": "xemonbae@gmail.com",
-			"clientId": "703210852639-ic8u4br6bdo6jg6dgguirqi7jkgbpl6l.apps.googleusercontent.com",
-			"clientSecret": "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",
-			"refreshToken": "1//04svAaCtGHs-ICgYIARAAGAQSNwF-L9IrjiQvNzr409HIVspHncIVnrz7ZI5VxTU3dvw5TwHLZi1BhYEwEJNs9YpLDm7xDEBt1fU",
+			"email": "",
+			"clientId": "",
+			"clientSecret": "",
+			"refreshToken": "",
 			"apiKey": ""
 		},
 		"gRecaptcha": {
@@ -142,4 +142,4 @@
 		"autoReconnect": false,
 		"notes": "Document here: https://github.com/ntkhang03/fb-chat-api/blob/master/DOCS.md#apisetoptionsoptions "
 	}
-  }
+}
