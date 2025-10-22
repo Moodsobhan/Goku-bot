@@ -1,103 +1,76 @@
-const axios = require('axios');
-const fs = require('fs-extra');
-const path = require('path');
+const axios = require("axios");
+const fs = require("fs-extra");
+const path = require("path");
 
 module.exports = {
   config: {
-    name: 'sing',
-    version: '1.0',
-    author: 'Farhan',
-    countDown: 5,
-    prefix: true,
-    description: 'Search and play music from YouTube, auto selects most viewed.',
-    category: 'media',
+    name: "sing",
+    aliases: ["music", "play"],
+    version: "2.5",
+    author: "Farhan",
+    countDown: 3,
+    role: 0,
+    shortDescription: "Play a song from YouTube (auto selects most viewed)",
+    longDescription:
+      "Search for a song from YouTube, auto-selects the most viewed result, and sends high-quality audio.",
+    category: "media",
     guide: {
-      en: '{pn}sing <music name>'
+      en: "{pn} <song name>"
     }
   },
 
-  onStart: async ({ api, event, args }) => {
-    const threadID = event.threadID;
-    const messageID = event.messageID;
-    const query = args.join(' ').trim();
+  onStart: async function ({ message, args, api, event }) {
+    const query = args.join(" ").trim();
+    if (!query)
+      return message.reply("❌ | Please provide a song name.\nExample: sing Starboy");
 
-    if (!query) {
-      return api.sendMessage('❌ Please provide a music name. Example: sing Starboy', threadID, messageID);
-    }
-
-    let statusMsg;
+    let msg;
     try {
-   
-      statusMsg = await new Promise((resolve, reject) => {
-        api.sendMessage('🔎 Searching the music...', threadID, (err, info) => {
-          if (err) reject(err);
-          else resolve(info);
-        }, messageID);
-      });
+      msg = await message.reply(`🎵 Searching for **${query}**...`);
 
-   
-      const searchRes = await axios.get(`https://hridoy-apis.vercel.app/search/youtube?query=${encodeURIComponent(query)}&count=5&apikey=hridoyXQC`);
-      const results = searchRes.data && searchRes.data.result;
-      if (!Array.isArray(results) || results.length === 0) {
-        await api.editMessage('❌ No music found.', statusMsg.messageID);
-        return;
-      }
+      // ✅ NEW Powerful YouTube Music Search API
+      const searchUrl = `https://api.kenliejugarap.com/youtube/search?query=${encodeURIComponent(query)}`;
+      const searchRes = await axios.get(searchUrl);
+      const results = searchRes.data?.data;
 
+      if (!Array.isArray(results) || results.length === 0)
+        return message.edit("❌ | No results found on YouTube.");
 
-      let mostViewed = results[0];
-      for (const vid of results) {
-        if (vid.views > mostViewed.views) mostViewed = vid;
-      }
+      // Choose most viewed
+      const best = results.sort((a, b) => (b.views || 0) - (a.views || 0))[0];
 
-      await api.editMessage('⬇️ Downloading...', statusMsg.messageID);
+      // ✅ Use a faster, reliable converter
+      const downloadApi = `https://api.kenliejugarap.com/youtube/download?url=${encodeURIComponent(best.url)}&type=mp3`;
+      const downRes = await axios.get(downloadApi);
+      const dlUrl = downRes.data?.downloadUrl;
 
-      const ytmp3Res = await axios.get(`https://hridoy-apis.vercel.app/downloader/ytmp4?url=${encodeURIComponent(mostViewed.url)}&format=mp3&apikey=hridoyXQC`);
-      const downloadUrl = ytmp3Res.data?.result?.download;
-      const musicTitle = ytmp3Res.data?.result?.title || mostViewed.title;
-      const musicAuthor = mostViewed.author;
-      const views = mostViewed.views?.toLocaleString?.() || mostViewed.views || "N/A";
+      if (!dlUrl) return message.edit("❌ | Failed to fetch download link.");
 
-      if (!downloadUrl) {
-        await api.editMessage('❌ Failed to get music download link.', statusMsg.messageID);
-        return;
-      }
+      await message.edit("⬇️ | Downloading high-quality audio...");
 
-    
-      await api.editMessage('📤 Sending...', statusMsg.messageID);
-
-    
-      const cacheDir = path.join(__dirname, 'cache');
+      const cacheDir = path.join(__dirname, "cache");
       await fs.ensureDir(cacheDir);
       const filePath = path.join(cacheDir, `sing_${Date.now()}.mp3`);
 
-      const audioRes = await axios.get(downloadUrl, { responseType: 'arraybuffer', timeout: 60000 });
+      const audioRes = await axios.get(dlUrl, { responseType: "arraybuffer" });
       await fs.writeFile(filePath, Buffer.from(audioRes.data));
 
-     
-      await new Promise((resolve, reject) => {
-        api.sendMessage({
-          body: `🎶 ${musicTitle}\n👤 Author: ${musicAuthor}\n👁️ Views: ${views}`,
-          attachment: fs.createReadStream(filePath)
-        }, threadID, (err) => {
-          fs.unlink(filePath).catch(() => {});
-          if (err) reject(err);
-          else resolve();
-        }, messageID);
+      const info = `🎶 | ${best.title}\n👤 Artist: ${best.channel}\n👁️ Views: ${best.views.toLocaleString()}`;
+
+      await message.reply({
+        body: info,
+        attachment: fs.createReadStream(filePath)
       });
 
-     
-      if (statusMsg?.messageID) {
-        await api.unsendMessage(statusMsg.messageID);
-      }
+      await fs.unlink(filePath).catch(() => {});
+      await api.unsendMessage(msg.messageID);
 
-    } catch (error) {
-      console.error('[sing] Error:', error);
-      if (statusMsg?.messageID) {
-        await api.editMessage('❌ Error occurred while processing your request.', statusMsg.messageID);
-        setTimeout(() => api.unsendMessage(statusMsg.messageID), 10000);
-      } else {
-        api.sendMessage('❌ Error occurred while processing your request.', threadID, messageID);
-      }
+    } catch (err) {
+      console.error("[sing command error]", err);
+      if (msg?.messageID)
+        message.edit("❌ | An error occurred while processing your request.");
+      else
+        message.reply("❌ | Something went wrong, please try again later.");
     }
   }
 };
